@@ -1,95 +1,56 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, url_for
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.pipeline import Pipeline
-import os
+import joblib
 
 app = Flask(__name__)
 
-# Load dataset
-data = pd.read_csv("rainfall in india 1901-2015.csv")
+# Load model and features
+model, model_features = joblib.load('model.pkl')
 
-# Use the correct column for all Indian states
-states = sorted(data['SUBDIVISION'].unique())
+# Region and month options
+regions = [
+    "ARUNACHAL PRADESH", "ASSAM & MEGHALAYA", "BIHAR", "CHHATTISGARH", "COASTAL ANDHRA PRADESH",
+    "COASTAL KARNATAKA", "EAST MADHYA PRADESH", "EAST RAJASTHAN", "EAST UTTAR PRADESH",
+    "GANGETIC WEST BENGAL", "GUJARAT REGION", "HARYANA DELHI & CHANDIGARH", "HIMACHAL PRADESH",
+    "JAMMU & KASHMIR", "JHARKHAND", "KERALA", "KONKAN & GOA", "LAKSHADWEEP", "MADHYA MAHARASHTRA",
+    "MATATHWADA", "NORTH INTERIOR KARNATAKA", "ORISSA", "PUNJAB", "RAYALSEEMA",
+    "SAURASHTRA & KUTCH", "SOUTH INTERIOR KARNATAKA", "SUB HIMALAYAN WEST BENGAL & SIKKIM",
+    "TAMIL NADU", "TELANGANA", "UTTARAKHAND", "VIDARBHA", "WEST MADHYA PRADESH",
+    "WEST RAJASTHAN", "WEST UTTAR PRADESH", "NAGA MANI MIZO TRIPURA"
+]
+months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+
+def format_region_filename(region):
+    return region.lower().replace("&", "and").replace(" ", "_") + ".png"
 
 @app.route('/')
 def home():
-    return render_template("index.html", states=states)
+    return render_template('index.html', regions=regions, months=months)
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if request.is_json:
-        # Handle AJAX request
-        request_data = request.get_json()
-        selected_state = request_data.get('state')
-        year = int(request_data.get('year', 2025))
-        month = int(request_data.get('month', 6))  # Default to June if not provided
-        
-        # Process prediction
-        prediction = process_prediction(selected_state, year)
-        
-        # Define flood threshold (this is hypothetical and should be adjusted)
-        flood_threshold = 300  # mm of rainfall
-        
-        # Generate flood alert message
-        if prediction > flood_threshold:
-            flood_alert = "Flood Alert: High risk of flooding! Please take necessary precautions."
-        elif prediction > flood_threshold * 0.7:
-            flood_alert = "Warning: Moderate risk of flooding possible."
-        else:
-            flood_alert = "No flood risk predicted at this time."
-            
-        return jsonify({
-            'predicted_rainfall': round(prediction, 2),
-            'flood_alert': flood_alert
-        })
-    else:
-        # Handle form submission
-        selected_state = request.form['state']
-        year = int(request.form['year'])
-        
-        # Process prediction
-        prediction = process_prediction(selected_state, year)
-        
-        return render_template('result.html', prediction=round(prediction, 2), state=selected_state, year=year)
+    region = request.form['region']
+    month = request.form['month']
+    year = int(request.form['year'])
 
-def process_prediction(selected_state, year):
-    # Filter the data for the selected state
-    state_data = data[data['SUBDIVISION'] == selected_state]
-    
-    # Check if state data exists
-    if state_data.empty:
-        return 0  # Return default value if no data
-    
-    # Average rainfall by year
-    df = state_data.groupby('YEAR').mean(numeric_only=True).reset_index()
-    
-    # Feature and target
-    X = df[['YEAR']]
-    y = df[['ANNUAL']]
-    
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    # Pipeline with scaling and model
-    pipeline = Pipeline([
-        ('scaler', StandardScaler()),
-        ('rf', RandomForestRegressor())
-    ])
-    
-    pipeline.fit(X_train, y_train)
-    
-    # Make prediction
-    prediction = pipeline.predict([[year]])[0]
-    
-    return prediction
+    input_df = pd.DataFrame([[region, year, month]], columns=['SUBDIVISION', 'YEAR', 'MONTH'])
+    input_encoded = pd.get_dummies(input_df).reindex(columns=model_features, fill_value=0)
+    prediction = model.predict(input_encoded)[0]
+    flood_alert = prediction > 300  # mm threshold
 
-@app.route('/static/maps/<state_name>')
-def get_state_map(state_name):
-    # This route will serve state map images if needed
-    return app.send_static_file(f'img/maps/{state_name}')
+    map_filename = format_region_filename(region)
+
+    return render_template(
+        'index.html',
+        prediction=round(prediction, 2),
+        flood_alert=flood_alert,
+        regions=regions,
+        months=months,
+        selected_region=region,
+        selected_month=month,
+        selected_year=year,
+        map_filename=map_filename
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)

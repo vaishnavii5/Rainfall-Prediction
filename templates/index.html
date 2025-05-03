@@ -1,176 +1,51 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rainfall Prediction and Flood Alert</title>
-    <link rel="icon" href="{{ url_for('static', filename='img/R1.jpg') }}">
-    <audio id="beep-sound" src="{{ url_for('static', filename='audio/beep.mp3') }}"></audio>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <header>
-        <div class="container">
-          <h1 class="logo"></h1>
-          <nav>
-            <ul>
-              <li><a href="#"><h3>Welcome to my rainfall prediction and flood alert system</h3></a></li>
-              <li><a href="#">Home</a></li>
-              <li><a href="#">About</a></li>
-              <li><a href="#">Prediction</a></li>
-              <li><a href="#">Alert</a></li>
-            </ul>
-          </nav>
-        </div>
-    </header>
+    <div class="container">
+        <h1>Rainfall Prediction and Flood Alert</h1>
+        <form action="/predict" method="post">
+            <label for="region">Select Region:</label>
+            <select name="region" id="region" required>
+                {% for region in regions %}
+                    <option value="{{ region }}" {% if region == selected_region %}selected{% endif %}>{{ region }}</option>
+                {% endfor %}
+            </select>
 
-    <form id="prediction-form">
-        <table>
-            <tr>
-                <td>Select State:</td>
-                <td>
-                    <select name="state" id="state" onchange="updateMapImage()">
-                        {% for state in states %}
-                        <option value="{{ state }}">{{ state }}</option>
-                        {% endfor %}
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td>Enter Month:</td>
-                <td> <input id="month-input" type="number" placeholder="Enter Month" min="1" max="12" value="6"></td>
-            </tr>
-            <tr>
-                <td>Enter Year:</td>
-                <td> <input id="year-input" type="number" placeholder="Enter Year" min="2020" max="2050" value="2025"></td>
-            </tr>
-            <tr>
-                <td colspan="2"><button type="submit">Predict rainfall</button></td>
-            </tr>
-        </table>
-    </form>
+            <label for="month">Select Month:</label>
+            <select name="month" id="month" required>
+                {% for month in months %}
+                    <option value="{{ month }}" {% if month == selected_month %}selected{% endif %}>{{ month }}</option>
+                {% endfor %}
+            </select>
 
-<div id="prediction-result">
-    <p id="rainfall-prediction"></p>
-    <p id="flood-alert"></p>
-</div>
+            <label for="year">Enter Year:</label>
+            <input type="number" name="year" id="year" min="1901" max="2100" required value="{{ selected_year if selected_year else '' }}">
 
-<div class="one">
-    <p>The Intelligent Rainfall Prediction and Flood Alert System utilizes machine learning algorithms to predict rainfall patterns. It analyzes historical rainfall data along with meteorological parameters to train the model. The system continuously monitors current weather conditions and predicts future rainfall. If the predicted rainfall exceeds a certain threshold, the system triggers a flood alert. The model's accuracy improves over time as it learns from new data. This system helps authorities and communities prepare for potential floods by providing timely alerts and aiding in decision-making processes related to disaster management.</p>
-</div><br>
+            <button type="submit">Predict</button>
+        </form>
 
-<div class="her">
-    <img id="stateMap" src="{{ url_for('static', filename='img/maps/' + states[0] + '.png') }}" alt="State Map">
-</div><br><br><br><br>
+        {% if prediction %}
+            <div class="result">
+                <h2>Predicted Rainfall: {{ prediction }} mm</h2>
+                {% if flood_alert %}
+                    <h3 class="alert">⚠️ Flood Risk Alert!</h3>
+                    <audio autoplay>
+                        <source src="{{ url_for('static', filename='audio/flood_alert.mp3') }}" type="audio/mpeg">
+                    </audio>
+                {% else %}
+                    <h3 class="safe">✅ No Flood Risk</h3>
+                {% endif %}
 
-<div class="product1">
-    <div class="box">
-        <img src="{{ url_for('static', filename='img/Figure_1.png') }}">
-        <p>ANNUAL RAINFALL V/S SUBDIVISION</p>
+                {% if map_filename %}
+                    <h3>Region Map: {{ selected_region }}</h3>
+                    <img src="{{ url_for('static', filename='img/maps/' + map_filename) }}" alt="{{ selected_region }} map">
+                {% endif %}
+            </div>
+        {% endif %}
     </div>
-    <div class="box">
-        <img src="{{ url_for('static', filename='img/Figure_2.png') }}">
-        <p>YEAR V/S RAINFALL IN EACH MONTH</p>
-    </div>
-    <div class="box">
-        <img src="{{ url_for('static', filename='img/Figure_3.png') }}">
-        <P>RAINFALL OVER YEARS</P>
-    </div>
-    <div class="box">
-        <img src="{{ url_for('static', filename='img/Figure_4.png') }}">
-        <P>RAINFALL IN MM AND YEAR</P>
-    </div>
-    <div class="box">
-        <img src="{{ url_for('static', filename='img/Figure_5.png') }}">
-        <P>SUBDIVISION V/S RAINFALL IN EACH MONTH</P>
-    </div>   
-</div>
-<div class="product2">
-    <div class="box1">
-        <img src="{{ url_for('static', filename='img/Figure_6.png') }}">
-        <P>STATES AND RAINFALL IN MM</P>
-    </div> 
-    <div class="box1">
-        <img src="{{ url_for('static', filename='img/Figure_8.png') }}">
-        <P>STATE RAINFALL V/S MONTHS</P>
-    </div>
-    <div class="box1">
-        <img src="{{ url_for('static', filename='img/Figure_9.png') }}">
-        <P>RAINFALL FROM YEAR 1901 TO 2015</P>
-    </div>
-    <div class="box1">
-        <img src="{{ url_for('static', filename='img/Figure_10.png') }}">
-        <p>CORRELATION</p>
-    </div>
-    <div class="box1">
-        <img src="{{ url_for('static', filename='img/R.jpg') }}">
-    </div>
-</div><br>
-
-<footer class="footer">
-    <div class="footer-content">
-        <h4>Developed by</h4>
-        <p>
-            Harish Vishnu K<br>
-            Contact Details:<br>
-            Email: vishnuharish2704@gmail.com<br>
-            Phone: 7010771400
-        </p>
-    </div>
-</footer>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-$(document).ready(function() {
-    // Initialize the map image
-    updateMapImage();
-    
-    $('#prediction-form').submit(function(event) {
-        event.preventDefault();
-        var month = $('#month-input').val();
-        var year = $('#year-input').val();
-        var state = $('#state').val();
-
-        $.ajax({
-            type: 'POST',
-            url: '/predict',
-            contentType: 'application/json',
-            data: JSON.stringify({ month: month, year: year, state: state }),
-            success: function(response) {
-                var predictionMessage = 'Predicted rainfall: ' + response.predicted_rainfall + ' mm';
-                var floodAlertMessage = response.flood_alert;
-                $('#rainfall-prediction').text(predictionMessage);
-                $('#flood-alert').text(floodAlertMessage);
-                
-                if (floodAlertMessage.includes('Flood Alert')) {
-                    document.getElementById('beep-sound').play();
-                    $('#flood-alert').addClass('alert');
-                } else {
-                    $('#flood-alert').removeClass('alert');
-                }
-            },
-            error: function() {
-                $('#rainfall-prediction').text('Error predicting rainfall.');
-                $('#flood-alert').text('');
-            }
-        });
-    });
-});
-
-function updateMapImage() {
-    const selectedState = document.getElementById("state").value;
-    const encodedState = encodeURIComponent(selectedState);
-    const stateMap = document.getElementById("stateMap");
-    stateMap.src = "{{ url_for('static', filename='img/maps/') }}" + encodedState + ".png";
-    stateMap.alt = selectedState + " Map";
-    
-    // Add fallback in case image doesn't exist
-    stateMap.onerror = function() {
-        this.src = "{{ url_for('static', filename='img/maps/default.png') }}";
-        this.alt = "Default Map";
-    };
-}
-</script>
 </body>
 </html>
