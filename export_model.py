@@ -3,23 +3,29 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.model_selection import train_test_split
 import joblib
 
-# Load and preprocess your updated dataset
+# Load and clean dataset
 df = pd.read_csv('rainfall in india 1901-2015.csv')
-df = df.dropna(subset=['STATE_UT_NAME', 'YEAR'])
+df = df.dropna(subset=['SUBDIVISION', 'YEAR'])
 
-# Group and average relevant features
-monthly_cols = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
-df_grouped = df.groupby(['STATE_UT_NAME', 'YEAR'])[monthly_cols].mean().reset_index()
+# Reshape data for month-wise predictions
+monthly_cols = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
+                'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+df_melted = df.melt(id_vars=['SUBDIVISION', 'YEAR'], 
+                    value_vars=monthly_cols,
+                    var_name='MONTH', value_name='RAINFALL')
 
-# Define features and target
-X = df_grouped[['STATE_UT_NAME', 'YEAR']].copy()
-X = pd.get_dummies(X, columns=['STATE_UT_NAME'])  # one-hot encode region
-y = df_grouped[['JUN', 'JUL', 'AUG', 'SEP']].sum(axis=1)  # Jun–Sep monsoon total
+# Remove rows with missing rainfall values
+df_melted.dropna(subset=['RAINFALL'], inplace=True)
 
-# Train the model
+# Prepare features
+X = df_melted[['SUBDIVISION', 'YEAR', 'MONTH']]
+X = pd.get_dummies(X)
+y = df_melted['RAINFALL']
+
+# Train model
 X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
 model = DecisionTreeRegressor()
 model.fit(X_train, y_train)
 
-# Save the model
+# Save model
 joblib.dump((model, X.columns.tolist()), 'model.pkl')

@@ -1,30 +1,35 @@
-from flask import Flask, render_template, request, url_for
+from flask import Flask, request, render_template
 import pandas as pd
 import joblib
+import os
 
 app = Flask(__name__)
 
-# Load model and features
+# Load model and feature columns
 model, model_features = joblib.load('model.pkl')
 
-# Region and month options
+# Define region and month options
 regions = [
-    "ARUNACHAL PRADESH", "ASSAM & MEGHALAYA", "BIHAR", "CHHATTISGARH", "COASTAL ANDHRA PRADESH",
-    "COASTAL KARNATAKA", "EAST MADHYA PRADESH", "EAST RAJASTHAN", "EAST UTTAR PRADESH",
-    "GANGETIC WEST BENGAL", "GUJARAT REGION", "HARYANA DELHI & CHANDIGARH", "HIMACHAL PRADESH",
-    "JAMMU & KASHMIR", "JHARKHAND", "KERALA", "KONKAN & GOA", "LAKSHADWEEP", "MADHYA MAHARASHTRA",
-    "MATATHWADA", "NORTH INTERIOR KARNATAKA", "ORISSA", "PUNJAB", "RAYALSEEMA",
-    "SAURASHTRA & KUTCH", "SOUTH INTERIOR KARNATAKA", "SUB HIMALAYAN WEST BENGAL & SIKKIM",
-    "TAMIL NADU", "TELANGANA", "UTTARAKHAND", "VIDARBHA", "WEST MADHYA PRADESH",
-    "WEST RAJASTHAN", "WEST UTTAR PRADESH", "NAGA MANI MIZO TRIPURA"
+    'ANDAMAN & NICOBAR ISLANDS', 'ARUNACHAL PRADESH', 'ASSAM & MEGHALAYA',
+    'NAGA MANI MIZO TRIPURA', 'SUB HIMALAYAN WEST BENGAL & SIKKIM',
+    'GANGETIC WEST BENGAL', 'ORISSA', 'JHARKHAND', 'BIHAR', 'EAST UTTAR PRADESH',
+    'WEST UTTAR PRADESH', 'UTTARAKHAND', 'HARYANA DELHI & CHANDIGARH',
+    'PUNJAB', 'HIMACHAL PRADESH', 'JAMMU & KASHMIR', 'WEST RAJASTHAN',
+    'EAST RAJASTHAN', 'WEST MADHYA PRADESH', 'EAST MADHYA PRADESH',
+    'GUJARAT REGION', 'SAURASHTRA & KUTCH', 'KONKAN & GOA', 'MADHYA MAHARASHTRA',
+    'MARATHWADA', 'VIDARBHA', 'CHHATTISGARH', 'COASTAL ANDHRA PRADESH',
+    'TELANGANA', 'RAYALASEEMA', 'TAMIL NADU', 'COASTAL KARNATAKA',
+    'NORTH INTERIOR KARNATAKA', 'SOUTH INTERIOR KARNATAKA', 'KERALA',
+    'LAKSHADWEEP'
 ]
-months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
-def format_region_filename(region):
-    return region.lower().replace("&", "and").replace(" ", "_") + ".png"
+# Helper to format map filename
+def format_region_filename(region_name):
+    return region_name.lower().replace(" & ", "_").replace(" ", "_") + '.png'
 
 @app.route('/')
-def home():
+def index():
     return render_template('index.html', regions=regions, months=months)
 
 @app.route('/predict', methods=['POST'])
@@ -33,10 +38,17 @@ def predict():
     month = request.form['month']
     year = int(request.form['year'])
 
+    # Create input dataframe
     input_df = pd.DataFrame([[region, year, month]], columns=['SUBDIVISION', 'YEAR', 'MONTH'])
+
+    # One-hot encode to match training
     input_encoded = pd.get_dummies(input_df).reindex(columns=model_features, fill_value=0)
+
+    # Predict
     prediction = model.predict(input_encoded)[0]
-    flood_alert = prediction > 300  # mm threshold
+
+    # Example threshold for flood alert
+    flood_alert = prediction > 300
 
     map_filename = format_region_filename(region)
 
