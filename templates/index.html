@@ -1,51 +1,106 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rainfall Prediction and Flood Alert</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>Rainfall Prediction and Flood Alert</h1>
-        <form action="/predict" method="post">
-            <label for="region">Select Region:</label>
-            <select name="region" id="region" required>
-                {% for region in regions %}
-                    <option value="{{ region }}" {% if region == selected_region %}selected{% endif %}>{{ region }}</option>
-                {% endfor %}
-            </select>
+    <div class="app-container">
+        <nav class="navbar">
+            <div class="logo">
+                <i class="fas fa-cloud-rain"></i>
+                <span>Rainfall Predictor</span>
+            </div>
+        </nav>
 
-            <label for="month">Select Month:</label>
-            <select name="month" id="month" required>
-                {% for month in months %}
-                    <option value="{{ month }}" {% if month == selected_month %}selected{% endif %}>{{ month }}</option>
-                {% endfor %}
-            </select>
+        <main class="main-content">
+            <div class="prediction-card">
+                <h1>Rainfall Prediction</h1>
+                <p class="subtitle">Enter the details below to predict rainfall and check flood risk</p>
 
-            <label for="year">Enter Year:</label>
-            <input type="number" name="year" id="year" min="1901" max="2100" required value="{{ selected_year if selected_year else '' }}">
+                <form action="/predict" method="post" class="prediction-form">
+                    <div class="form-group">
+                        <label for="region">
+                            <i class="fas fa-map-marker-alt"></i>
+                            Select Region
+                        </label>
+                        <select name="region" id="region" required>
+                            {% for region in regions %}
+                                <option value="{{ region }}" {% if region == selected_region %}selected{% endif %}>{{ region }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-            <button type="submit">Predict</button>
-        </form>
+                    <div class="form-group">
+                        <label for="month">
+                            <i class="fas fa-calendar-alt"></i>
+                            Select Month
+                        </label>
+                        <select name="month" id="month" required>
+                            {% for month in months %}
+                                <option value="{{ month }}" {% if month == selected_month %}selected{% endif %}>{{ month }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-        {% if prediction %}
-            <div class="result">
-                <h2>Predicted Rainfall: {{ prediction }} mm</h2>
-                {% if flood_alert %}
-                    <h3 class="alert">⚠️ Flood Risk Alert!</h3>
-                    <audio autoplay>
-                        <source src="{{ url_for('static', filename='audio/flood_alert.mp3') }}" type="audio/mpeg">
-                    </audio>
-                {% else %}
-                    <h3 class="safe">✅ No Flood Risk</h3>
-                {% endif %}
+                    <div class="form-group">
+                        <label for="year">
+                            <i class="fas fa-calendar"></i>
+                            Enter Year
+                        </label>
+                        <input type="number" name="year" id="year" min="1901" max="2100" required value="{{ selected_year if selected_year else '' }}" placeholder="Enter year (1901-2100)">
+                    </div>
 
-                {% if map_filename %}
-                    <h3>Region Map: {{ selected_region }}</h3>
-                    <img src="{{ url_for('static', filename='img/maps/' + map_filename) }}" alt="{{ selected_region }} map">
+                    <button type="submit" class="predict-button">
+                        <i class="fas fa-magic"></i>
+                        Predict Rainfall
+                    </button>
+                </form>
+
+                {% if prediction %}
+                    <div class="result-card">
+                        <div class="prediction-result">
+                            <h2>Predicted Rainfall</h2>
+                            <div class="rainfall-value">{{ prediction }} mm</div>
+                            
+                            {% if flood_alert %}
+                                <div class="alert-box flood">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <h3>Flood Risk Alert!</h3>
+                                    <p>High rainfall predicted. Please take necessary precautions.</p>
+                                    <audio autoplay>
+                                        <source src="{{ url_for('static', filename='audio/flood_alert.mp3') }}" type="audio/mpeg">
+                                    </audio>
+                                </div>
+                            {% else %}
+                                <div class="alert-box safe">
+                                    <i class="fas fa-check-circle"></i>
+                                    <h3>No Flood Risk</h3>
+                                    <p>Predicted rainfall is within safe limits.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% if map_filename %}
+                            <div class="map-container">
+                                <h3>Region Map</h3>
+                                <div class="map-wrapper">
+                                    <img src="{{ url_for('static', filename='img/maps/' + map_filename) }}" alt="{{ selected_region }} map">
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
                 {% endif %}
             </div>
-        {% endif %}
+        </main>
+
+        <footer class="footer">
+            <p>Rainfall Predictor</p>
+        </footer>
     </div>
 </body>
 </html>
